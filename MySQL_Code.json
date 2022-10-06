@@ -1,0 +1,41 @@
+CREATE TABLE 'test'.'Customer_Table' (
+  'Customer_ID' INT NOT NULL,
+  'Name' VARCHAR(200) NOT NULL,
+  'City' VARCHAR(200) NOT NULL,
+  'Country' VARCHAR(200) NOT NULL,
+  'Status' VARCHAR(200) NOT NULL,
+  PRIMARY KEY ('Customer_ID'));
+
+CREATE DEFINER=`admin`@`%` PROCEDURE `Customer_SP`(IN Customer_ID INT,
+							IN Name VARCHAR(200),
+                            IN City VARCHAR(200),
+                            IN Country VARCHAR(200),
+                            IN Status VARCHAR(200))
+BEGIN
+
+CALL mysql.lambda_async(
+         'arn:aws:lambda:eu-central-1:986039822810:function:WebhooksStack-toEventBridgeFunctionF6D4A1DB-QtHqVF2SGE8t', 
+         CONCAT('{"Customer_ID" : "', Customer_ID,
+				'", "Name" : "', Name,
+                '", "City" : "', City,
+                 '", "Country" : "', Country,
+                 '", "Status" : "', Status,'"}')
+             
+     );
+END
+
+
+
+DELIMITER ;;
+CREATE TRIGGER Customer_Table_TR
+  AFTER INSERT ON Customer_Table
+  FOR EACH ROW
+BEGIN
+ SELECT CONCAT('New customer purchase', NEW.Customer_ID), NEW.Name, New.City, New.Country, New.Status INTO @Customer_ID, @Name, @City, @Country, @Status;
+  CALL Customer_SP(@Customer_ID, @Name, @City, @Country, @Status);
+  
+END
+;;
+DELIMITER ;
+
+
